@@ -1,2 +1,8 @@
 /target/
 /plugin/
+# Notes for coding assistants are not part of the project.
+/CLAUDE.md
+/AGENTS.md
+/PLAN.md
+/.claude/
+/.mcp.json
