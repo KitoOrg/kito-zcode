@@ -44,16 +44,13 @@ fn it_writes_what_zcode_reads_of_a_project_and_takes_it_out_again() {
         said.contains("wrote AGENTS.md") && said.contains("wrote .zcode/config.json"),
         "{said}"
     );
-    // What it cannot write in a project is said, not kept quiet.
+    // ZCode runs no hooks of a project: the person's own are written, and said.
     assert!(
-        said.contains("NOT held to the rules on this machine")
-            && said.contains("kito zcode hooks install"),
+        said.contains("Kito's hooks, for every project you open in ZCode"),
         "{said}"
     );
-    assert!(
-        !home.exists(),
-        "nothing of the person's own is written unasked"
-    );
+    let own = json_of(home.join(".zcode/cli/config.json"));
+    assert_eq!(own["hooks"]["enabled"], true, "{own}");
 
     let rules = text(root.join("AGENTS.md"));
     assert!(
@@ -71,11 +68,13 @@ fn it_writes_what_zcode_reads_of_a_project_and_takes_it_out_again() {
 
     let (ok, said) = plugin(&root, &home, &["assistant", "setup"]);
     assert!(
-        ok && said.contains("everything was there already"),
+        ok && said.contains("everything was there already") && said.contains("hooks were in"),
         "{said}"
     );
     let (ok, said) = plugin(&root, &home, &["assistant", "remove"]);
     assert!(ok && said.contains("removed AGENTS.md"), "{said}");
+    // The hooks are the person's, for the other projects: they stay.
+    assert!(home.join(".zcode/cli/config.json").is_file());
     assert!(!root.join("AGENTS.md").exists() && !root.join(".zcode").exists());
     let (ok, said) = plugin(&root, &home, &["assistant", "remove"]);
     assert!(ok && said.contains("nothing of it was there"), "{said}");
@@ -191,7 +190,7 @@ fn the_hooks_are_a_person_s_own_and_written_only_when_asked() {
         .contains("ZCode is held to the rules on this machine"));
     assert!(plugin(&root, &home, &["assistant", "setup"])
         .1
-        .contains("is held to the rules"));
+        .contains("hooks were in"));
 
     // Taken out: the person's own hook stays, and so does what they said about running hooks.
     let (ok, said) = plugin(&root, &home, &["hooks", "remove"]);
@@ -281,19 +280,19 @@ fn kito_sets_zcode_up_and_its_hook_answers_what_zcode_says() {
         &["plugin", "add", "--path", source.to_str().unwrap()],
         None,
     );
-    kito(&root, &["plugin", "enable", "zcode"], None);
-    assert!(kito(&root, &["assistant", "list"], None).contains("zcode  (plugin zcode"));
+    // The same command as for every assistant: the plugin is enabled here,
+    // the project set up, and the hooks written where ZCode runs them from.
     let set_up = kito(&root, &["assistant", "add", "zcode"], None);
+    assert!(set_up.contains("enabled the plugin zcode here"), "{set_up}");
     assert!(
-        set_up.contains("ZCode is set up for Kito") && set_up.contains("NOT held to the rules"),
+        set_up.contains("ZCode is set up for Kito")
+            && set_up.contains("Kito's hooks, for every project"),
         "{set_up}"
     );
     assert!(root.join(".zcode/config.json").is_file());
-
-    // Its command is Kito's, and writes the hooks where ZCode runs them from.
-    let installed = kito(&root, &["zcode", "hooks", "install"], None);
-    assert!(installed.contains("wrote"), "{installed}");
     assert!(home.join(".zcode/cli/config.json").is_file());
+    assert!(kito(&root, &["assistant", "list"], None).contains("plugin zcode, enabled here"));
+    assert!(kito(&root, &["zcode", "hooks"], None).contains("ZCode is held to the rules"));
 
     // The hook is Kito's own command, given what ZCode's documentation
     // says ZCode sends before it writes a file: one line of JSON.

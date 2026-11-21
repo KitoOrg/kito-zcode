@@ -1,7 +1,7 @@
 [package]
 name = "kito-zcode"
 description = "ZCode set up to work through Kito: a plugin that writes its rules and tools, and its hooks when asked"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"

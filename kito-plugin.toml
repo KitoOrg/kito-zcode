@@ -1,5 +1,5 @@
 name = "zcode"
-version = "0.1.1"
+version = "0.2.0"
 description = "ZCode, the coding assistant of Z.ai, set up to work through Kito"
 api = 1
 # It asks the daemon nothing: the hooks are Kito's own commands, run by

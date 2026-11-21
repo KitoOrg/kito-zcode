@@ -5,12 +5,14 @@
 //!
 //! - `kito assistant add zcode` (which runs `kito-zcode assistant setup`)
 //!   writes what ZCode reads in a project: the rules in `AGENTS.md` and
-//!   Kito's tools in `.zcode/config.json`;
-//! - `kito assistant remove zcode` takes exactly that out again;
+//!   Kito's tools in `.zcode/config.json`; and, since ZCode runs no hooks
+//!   of a project, Kito's hooks in the person's own settings
+//!   (`~/.zcode/cli/config.json`), as every other assistant gets them with
+//!   the same command (Kito's ADR 0011);
+//! - `kito assistant remove zcode` takes out what it wrote in the project;
+//!   the hooks stay, for the other projects (`kito zcode hooks remove`);
 //! - `kito zcode hooks` says whether ZCode is held to the rules on this
-//!   machine. ZCode runs no hooks of a project: the ones that hold it to
-//!   the rules are a person's own, in `~/.zcode/cli/config.json`, and are
-//!   written there only when asked (`kito zcode hooks install`).
+//!   machine.
 //!
 //! The hooks are Kito's own commands (`kito hook …`): ZCode says what a
 //! tool is about to do in the words Claude Code uses, which Kito reads.
@@ -69,8 +71,18 @@ fn main() -> ExitCode {
             let done = setup::setup(&root)?;
             println!("ZCode is set up for Kito in this repository:");
             said(&root, done, "  everything was there already");
+            // ZCode runs no hooks of a project: without the person's own,
+            // nothing holds it to the rules.
+            let path = setup::own_config()?;
+            match setup::hooks(&path, true)? {
+                Some(done) => {
+                    println!("  {} {}: Kito's hooks, for every project you open in ZCode", done.what, path.display());
+                    println!("  (ZCode now runs the hooks of that file: yours too, if you had some.)");
+                }
+                None => println!("  Kito's hooks were in {} already.", path.display()),
+            }
             println!("`kito` and `kito-mcp` must be on the PATH ZCode runs with.");
-            about_hooks()
+            Ok(())
         }),
         ["assistant", "remove"] => repository().and_then(|root| {
             let done = setup::remove(&root)?;

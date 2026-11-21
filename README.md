@@ -4,17 +4,18 @@
 through [Kito](https://github.com/KitoOrg/kito). A plugin of Kito.
 
 ```console
-$ kito plugin add --path plugin
 $ cd your-repository
-$ kito plugin enable zcode
 $ kito assistant add zcode
-ZCode is set up for Kito in this repository:
-  wrote AGENTS.md
-  wrote .zcode/config.json
-ZCode is NOT held to the rules on this machine: 0 of Kito's 3 hooks are in ~/.zcode/cli/config.json.
-$ kito zcode hooks install
+Set up for ZCode:
+  enabled the plugin zcode here: it may read
+  ZCode is set up for Kito in this repository:
+    wrote AGENTS.md
+    wrote .zcode/config.json
+    wrote ~/.zcode/cli/config.json: Kito's hooks, for every project you open in ZCode
 ```
 
+The same command as for every other assistant (Kito 0.26). It installs
+the plugin when it is not there, enables it here, and runs it.
 `kito assistant remove zcode` takes out what was written in the project;
 `kito zcode hooks remove`, what was written for you.
 
@@ -35,7 +36,8 @@ is neither replaced nor taken out.
 
 ZCode runs no hooks of a project: only those of your own configuration,
 `~/.zcode/cli/config.json`. So what holds ZCode to the rules cannot come
-with the repository, and the plugin writes nothing of yours unasked.
+with the repository: `kito assistant add zcode` writes them there, and
+says so.
 
 - `kito zcode hooks` says whether Kito's hooks are there, and prints them.
 - `kito zcode hooks install` adds them: `kito hook before-edit` before
