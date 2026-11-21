@@ -99,6 +99,23 @@ fn main() -> ExitCode {
             }
             Ok(())
         }),
+        // One last time, where the plugin is disabled (`[cleanup]`, Kito
+        // 0.23): what it wrote in the project comes out with it.
+        ["cleanup", "repository"] => repository().and_then(|root| {
+            for one in setup::remove(&root)? {
+                println!("{} {}", one.what, one.path.strip_prefix(&root).unwrap_or(&one.path).display());
+            }
+            Ok(())
+        }),
+        // And for the person, when the plugin itself is removed: the hooks
+        // it wrote in their own configuration of ZCode.
+        ["cleanup", "person"] => setup::own_config().and_then(|path| {
+            if let Some(done) = setup::hooks(&path, false)? {
+                println!("{} {}", done.what, done.path.display());
+            }
+            Ok(())
+        }),
+        ["cleanup", _] => Ok(()),
         ["--version"] => {
             println!("kito-zcode {}", env!("CARGO_PKG_VERSION"));
             Ok(())

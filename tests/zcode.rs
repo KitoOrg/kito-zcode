@@ -337,5 +337,21 @@ fn kito_sets_zcode_up_and_its_hook_answers_what_zcode_says() {
 
     let removed = kito(&root, &["assistant", "remove", "zcode"], None);
     assert!(removed.contains("removed AGENTS.md"), "{removed}");
+
+    // Disabled, it takes out what it wrote in the project without being
+    // asked to; removed, the hooks it wrote for the person go too.
+    kito(&root, &["assistant", "add", "zcode"], None);
+    let disabled = kito(&root, &["plugin", "disable", "zcode"], None);
+    assert!(
+        disabled.contains("removed AGENTS.md") && disabled.contains("zcode is disabled"),
+        "{disabled}"
+    );
+    assert!(!root.join(".zcode").exists() && home.join(".zcode/cli/config.json").is_file());
+    let gone = kito(&root, &["plugin", "remove", "zcode"], None);
+    assert!(gone.contains("zcode is removed."), "{gone}");
+    assert!(
+        !home.join(".zcode/cli/config.json").exists(),
+        "its hooks are out of the person's configuration"
+    );
     kito(&root, &["daemon", "stop"], None);
 }
