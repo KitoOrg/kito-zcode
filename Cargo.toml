@@ -1,0 +1,23 @@
+[package]
+name = "kito-zcode"
+description = "ZCode set up to work through Kito: a plugin that writes its rules and tools, and its hooks when asked"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[[bin]]
+name = "kito-zcode"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.dist]
+inherits = "release"
+debug = false
+strip = true

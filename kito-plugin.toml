@@ -1,0 +1,14 @@
+name = "zcode"
+version = "0.1.0"
+description = "ZCode, the coding assistant of Z.ai, set up to work through Kito"
+api = 1
+# It asks the daemon nothing: the hooks are Kito's own commands, run by
+# ZCode as the person who runs it.
+permissions = ["read"]
+
+[assistant]
+name = "zcode"
+
+[[command]]
+name = "zcode"
+about = "ZCode's hooks, which are a person's own: hooks [install | remove]"
