@@ -1,0 +1,91 @@
+name: Release
+
+# A tag `v1.2.3` builds the plugin for each platform Kito is released
+# for, packs each build as the registry lists it
+# (`kito-<name>-<version>-<platform>.tar.gz`, a directory with
+# `kito-plugin.toml` and the program), with its SHA-256, and publishes a
+# GitHub Release. kito.sh's registry then lists these archives by their
+# address here: it holds none of them.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest Ubuntu runner: the programs run on older glibc too.
+          - { platform: linux-x86_64, runner: ubuntu-22.04 }
+          - { platform: linux-aarch64, runner: ubuntu-22.04-arm }
+          - { platform: macos-arm64, runner: macos-15 }
+          - { platform: macos-x86_64, runner: macos-15-intel }
+          - { platform: windows-x86_64, runner: windows-2022 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      # A plugin with pages builds them too (its build.sh does): they are
+      # inside its program.
+      - if: hashFiles('frontend/package-lock.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        shell: bash
+        run: scripts/build.sh --dist
+      - name: Pack
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name=$(sed -n 's/^name = "\(.*\)"/\1/p' kito-plugin.toml | head -1)
+          stated=$(sed -n 's/^version = "\(.*\)"/\1/p' kito-plugin.toml | head -1)
+          if [ "$stated" != "$version" ]; then
+            echo "the tag says $version, kito-plugin.toml says $stated" >&2
+            exit 1
+          fi
+          dir="kito-${name}-${version}-${{ matrix.platform }}"
+          mkdir -p "dist/$dir"
+          cp -R plugin/. "dist/$dir/"
+          cp README.md LICENSE-APACHE LICENSE-MIT "dist/$dir/"
+          cd dist
+          tar -czf "$dir.tar.gz" "$dir"
+          if command -v sha256sum > /dev/null; then sum=$(sha256sum "$dir.tar.gz"); else sum=$(shasum -a 256 "$dir.tar.gz"); fi
+          echo "${sum%% *}  $dir.tar.gz" > "$dir.tar.gz.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat dist/*.sha256 > dist/SHA256SUMS
+          name=$(sed -n 's/^name = "\(.*\)"/\1/p' kito-plugin.toml | head -1)
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^## \\[?" v "\\]?" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md 2> /dev/null || true
+          test -s notes.md || echo "kito-$name ${GITHUB_REF_NAME#v}: \`kito-server plugin add $name\`, or \`kito plugin add $name\` in a repository." > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.sha256 dist/SHA256SUMS \
+            --title "kito-$name ${GITHUB_REF_NAME#v}" --notes-file notes.md
